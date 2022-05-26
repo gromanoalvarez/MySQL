@@ -1,0 +1,169 @@
+CREATE DATABASE IF NOT EXISTS SEGUNDO_EJERCICIO
+USE SEGUNDO_EJERCICIO
+
+CREATE TABLE ALMACEN(
+Nro INT(5) PRIMARY KEY,
+Responsable VARCHAR(50) NOT NULL);
+
+CREATE TABLE ARTICULO(
+CodArt INT(5) PRIMARY KEY,
+Descripcion VARCHAR (50) NOT NULL,
+Precio DOUBLE);
+
+CREATE TABLE MATERIAL(
+CodMat INT(6) PRIMARY KEY,
+Descripcion VARCHAR(100) NOT NULL);
+
+CREATE TABLE CIUDAD(
+CodCiudad INT(2) PRIMARY KEY,
+Nombre VARCHAR(100) NOT NULL);
+
+CREATE TABLE PROVEEDOR(
+CodProv INT(5) PRIMARY KEY,
+Nombre VARCHAR(20) NOT NULL,
+Domicilio VARCHAR(100),
+CodCiudad INT(2) NOT NULL,
+FOREIGN KEY (CodCiudad) REFERENCES Ciudad (CodCiudad));
+
+CREATE TABLE CONTIENE(
+Cod_Contiene INT(3) PRIMARY KEY AUTO_INCREMENT,
+Nro INT(5) NOT NULL,
+CodArt INT(5) NOT NULL,
+FOREIGN KEY (Nro) REFERENCES ALMACEN (Nro),
+FOREIGN KEY (CodArt) REFERENCES ARTICULO (CodArt));
+
+CREATE TABLE COMPUESTO_POR(
+Cod_Composicion INT(3) PRIMARY KEY AUTO_INCREMENT,
+CodArt INT(5) NOT NULL,
+CodMat INT(6) NOT NULL,
+FOREIGN KEY (CodArt) REFERENCES ARTICULO (CodArt),
+FOREIGN KEY (CodMat) REFERENCES MATERIAL (CodMat));
+
+CREATE TABLE PROVISTO_POR(
+Cod_Provisto INT(3) PRIMARY KEY AUTO_INCREMENT,
+CodMat INT(6) NOT NULL,
+CodProv INT(5) NOT NULL,
+FOREIGN KEY (CodMat) REFERENCES MATERIAL (CodMat),
+FOREIGN KEY (CodProv) REFERENCES PROVEEDOR (CodProv));
+
+#-----------------------------------------------------
+#INSERTO DATOS
+INSERT INTO ALMACEN (Nro, Responsable)
+VALUES (001, 'Alfredo'),
+(002, 'Esteban'),
+(003, 'Juan'),
+(004, 'Roberto');
+
+INSERT INTO ARTICULO (CodArt, Descripcion, Precio)
+VALUES (001, 'Pan', 130.70),
+(002, 'Facturas', 300.00),
+(003, 'Cheese Cake', 450.87),
+(004, 'Pasta Frola', 278.90);
+
+INSERT INTO MATERIAL (CodMat, Descripcion)
+VALUES (001, 'Aceite'),
+(002, 'Harina'),
+(003, 'Levadura'),
+(004, 'Huevo'),
+(005, 'Azucar'),
+(006, 'Sal'),
+(007, 'Agua');
+
+INSERT INTO CIUDAD (CodCiudad, Nombre)
+VALUES (1, 'La Plata'),
+(2, 'Capital Federal'),
+(3, 'Ramos Mejia'),
+(4, 'La Matanza');
+
+INSERT INTO PROVEEDOR (CodProv, Nombre, Domicilio, CodCiudad)
+VALUES (1, 'Arcor', 'Ayacucho 1234', 1),
+(2, 'Molinos', 'Yatay 456', 4),
+(3, 'Ledesma', 'Mario Bravo 987', 1),
+(4, 'Marolio', 'Potosi 098', 2),
+(5, 'Glaciar', 'Sarmiento 555', 3);
+
+INSERT INTO CONTIENE (Nro, CodArt)
+VALUES (001, 001),
+(001, 002),
+(001, 003),
+(001, 004),
+(002, 003),
+(002, 004),
+(003, 001),
+(004, 002);
+
+INSERT INTO COMPUESTO_POR (CodArt, CodMat)
+VALUES (001, 001),
+(001, 002),
+(001, 003),
+(002, 002),
+(002, 005),
+(002, 007),
+(003, 001),
+(003, 002),
+(003, 006),
+(004, 007);
+
+INSERT INTO PROVISTO_POR(CodMat, CodProv)
+VALUES (001, 1),
+(002, 3),
+(003, 5),
+(004, 4),
+(005, 2),
+(006, 2),
+(007, 5);
+
+# CONSULTAS
+#1) Listar nombre de todos los proveedores y de su ciudad
+SELECT P.NOMBRE PROV_NOMBRE, C.NOMBRE CIUDAD
+FROM PROVEEDOR P JOIN CIUDAD C
+ON P.CODCIUDAD = C.CODCIUDAD;
+
+#2)Listar los nombres de los proveedores de la ciudad de La Plata
+SELECT P.NOMBRE, C.NOMBRE
+FROM PROVEEDOR P INNER JOIN CIUDAD C
+ON P.CODCIUDAD = C.CODCIUDAD
+WHERE C.NOMBRE = 'La Plata';
+
+#3) Listar los números de almacenes que almacenan el
+# artículo de descripción que empiece con P
+SELECT DISTINCT C.NRO NRO_ALMACEN
+FROM CONTIENE C JOIN ARTICULO A
+ON C.CODART = A.CODART
+WHERE A.DESCRIPCION LIKE 'P%'
+ORDER BY C.NRO;
+
+#4) Listar los números de almacenes y su responsable que almacenan el
+# artículo de descripción que empiece con P
+SELECT DISTINCT A.NRO NRO_ALMACEN, A.RESPONSABLE
+FROM ALMACEN A JOIN CONTIENE C ON A.NRO = C.NRO
+JOIN ARTICULO ART ON ART.CODART = C.CODART
+WHERE ART.DESCRIPCION LIKE 'P%';
+
+#5) Listar los materiales (código y descripción)
+# provistos por proveedores de la ciudad de Ramos Mejia
+SELECT M.CODMAT, M.DESCRIPCION, C.NOMBRE CIUDAD
+FROM MATERIAL M JOIN PROVISTO_POR P ON M.CODMAT =
+P.CODMAT
+JOIN PROVEEDOR PP ON P.CODPROV = PP.CODPROV
+JOIN CIUDAD C ON PP.CODCIUDAD = C.CODCIUDAD
+WHERE C.NOMBRE = 'Ramos Mejia';
+
+#6) Listar los nombres de los proveedores que proveen materiales
+# para artículos ubicados en almacenes que Roberto tiene a su cargo
+SELECT P.NOMBRE
+FROM ALMACEN A JOIN CONTIENE C ON A.NRO = C.NRO
+JOIN ARTICULO ART ON ART.CODART = C.CODART
+JOIN COMPUESTO_POR CP ON CP.CODART = ART.CODART
+JOIN MATERIAL M ON M.CODMAT = CP.CODMAT
+JOIN PROVISTO_POR PP ON PP.CODMAT = M.CODMAT
+JOIN PROVEEDOR P ON P.CODPROV=PP.CODPROV
+WHERE A.RESPONSABLE = 'Roberto';
+
+#OTRA MANERA DE HACERLO:
+SELECT P.NOMBRE
+FROM PROVEEDOR P JOIN PROVISTO_POR PP ON P.CODPROV = PP.CODPROV
+JOIN COMPUESTO_POR CP ON PP.CODMAT = CP.CODMAT
+JOIN CONTIENE C ON CP.CODART = C.CODART
+JOIN ALMACEN A ON C.NRO = A.NRO
+WHERE A.RESPONSABLE = 'ROBERTO';
