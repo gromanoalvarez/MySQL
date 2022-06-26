@@ -1,0 +1,151 @@
+CREATE DATABASE IF NOT EXISTS funcionesDeAgregacion;
+
+USE funcionesDeAgregacion;
+
+CREATE TABLE ALMACEN(
+	NRO INT(5) PRIMARY KEY,
+	NOMBRE VARCHAR(20) NOT NULL,
+	RESPONSABLE VARCHAR(50) NOT NULL);  
+
+CREATE TABLE ARTICULO(
+	CODART INT(5) PRIMARY KEY,
+	DESCRIPCION VARCHAR(50) NOT NULL,
+	PRECIO DOUBLE); 
+	
+CREATE TABLE MATERIAL(
+	CODMAT INT(6) PRIMARY KEY,
+	DESCRIPCION VARCHAR(100) NOT NULL); 
+	
+CREATE TABLE CIUDAD(
+	CODCIUDAD INT(2) PRIMARY KEY,
+	NOMBRE VARCHAR(100) NOT NULL); 
+	
+CREATE TABLE PROVEEDOR(
+	CODPROV INT(5) PRIMARY KEY,
+	NOMBRE VARCHAR(20) NOT NULL,
+	DOMICILIO  VARCHAR(100),
+	CODCIUDAD INT(2) NOT NULL,
+	FOREIGN KEY (CODCIUDAD) REFERENCES CIUDAD (CODCIUDAD));
+	
+CREATE TABLE CONTIENE(
+	COD_CONTIENE INT(3) PRIMARY KEY AUTO_INCREMENT,
+	NRO INT(5) NOT NULL,
+	CODART INT(5) NOT NULL,
+	FOREIGN KEY (NRO) REFERENCES ALMACEN (NRO),
+	FOREIGN KEY (CODART) REFERENCES ARTICULO (CODART));
+	
+CREATE TABLE COMPUESTO_POR(
+	COD_COMPOSICION INT(3) PRIMARY KEY AUTO_INCREMENT,
+	CODART INT(5) NOT NULL,
+	CODMAT INT(6) NOT NULL,
+	FOREIGN KEY (CODART) REFERENCES ARTICULO (CODART),
+	FOREIGN KEY (CODMAT) REFERENCES MATERIAL (CODMAT));
+	
+CREATE TABLE PROVISTO_POR(
+	COD_PROVISTO INT(3) PRIMARY KEY AUTO_INCREMENT,
+	CODMAT INT(6) NOT NULL,
+	CODPROV INT(5) NOT NULL,
+	FOREIGN KEY(CODMAT) REFERENCES MATERIAL(CODMAT),
+	FOREIGN KEY(CODPROV) REFERENCES PROVEEDOR(CODPROV));
+
+INSERT INTO ALMACEN (Nro, Nombre, Responsable)
+VALUES (001, 'La Original', 'Alfredo'),
+(002, 'Galpon', 'Esteban'),
+(003, 'Almacen de Don Juan', 'Juan'),
+(004, 'La Tiendita', 'Roberto');
+
+INSERT INTO ARTICULO (CodArt, Descripcion, Precio)
+VALUES (001, 'Pan', 130.70),
+(002, 'Facturas', 300.00),
+(003, 'Cheese Cake', 450.87),
+(004, 'Pasta Frola', 278.90);
+
+INSERT INTO MATERIAL (CodMat, Descripcion)
+VALUES (001, 'Aceite'),
+(002, 'Harina'),
+(003, 'Levadura'),
+(004, 'Huevo'),
+(005, 'Azucar'),
+(006, 'Sal'),
+(007, 'Agua');
+
+INSERT INTO CIUDAD(CodCiudad, Nombre)
+VALUES (1, 'La Plata'),
+(2, 'Capital Federal'),
+(3, 'Ramos Mejia'),
+(4, 'La Matanza');
+
+INSERT INTO PROVEEDOR (CodProv, Nombre, Domicilio, CodCiudad) VALUES
+(1, 'Arcor', 'Ayacucho 1234', 1),
+(2, 'Molinos', 'Yatay 456', 4),
+(3, 'Ledesma', 'Mario Bravo 987', 1),
+(4, 'Marolio', 'Potosi 098', 2),
+(5, 'Glaciar', 'Sarmiento 555', 3),
+(6, 'Johnson', 'Potosi 123', 1);
+
+INSERT INTO CONTIENE (Nro, CodArt)
+VALUES (001, 001),
+(001, 002),
+(001, 003),
+(001, 004),
+(002, 003),
+(002, 004),
+(003, 001),
+(004, 002);
+
+INSERT INTO COMPUESTO_POR (CodArt, CodMat)
+VALUES(001, 001),
+(001, 002),
+(001, 003),
+(002, 002),
+(002, 005),
+(002, 007),
+(003, 001),
+(003, 002),
+(003, 006),
+(004, 007);
+
+INSERT INTO PROVISTO_POR(CodMat, CodProv)
+VALUES (001, 1),
+(002, 3),
+(003, 5),
+(004, 4),
+(005, 2),
+(006, 2),
+(007, 5);
+
+#1) Indicar la cantidad de proveedores que comienzan con la letra L
+SELECT COUNT(*)
+FROM proveedor 
+WHERE NOMBRE LIKE 'L%';
+
+#2) Listar el promedio de precios de los artículos por cada almacén (nombre)
+SELECT ROUND(AVG(A.PRECIO)) AS PRECIO_PROMEDIO_DE_ARTICULOS, AL.NOMBRE AS NOMBRE_DE_ALMACEN, AL.NRO 
+FROM articulo A JOIN contiene C ON A.CODART=C.CODART
+JOIN almacen AL ON C.NRO = AL.NRO
+GROUP BY AL.NRO;
+
+#3) Listar la descripción de artículos compuestos por al menos 2 materiales
+SELECT A.DESCRIPCION, CP.CODART, COUNT(CP.CODMAT) AS CANTIDAD_MATERIALES
+FROM articulo A JOIN compuesto_por CP ON A.CODART=CP.CODART
+GROUP BY CP.CODART
+HAVING COUNT(CP.CODMAT) >= 2;
+
+#4) Listar cantidad de materiales que provee cada proveedor y el código, nombre y domicilio del proveedor.
+SELECT P.CODPROV, COUNT(PP.CODMAT), P.NOMBRE, P.DOMICILIO
+FROM proveedor P LEFT JOIN provisto_por PP ON P.CODPROV=PP.CODPROV
+GROUP BY P.CODPROV;
+
+#5) Cuál es el precio máximo de los artículos que estan compuestos por materiales que proveen los proveedores de la ciudad de La Plata.
+SELECT MAX(A.Precio) Precio_Max
+FROM PROVEEDOR P JOIN CIUDAD C ON P.CodCiudad =
+C.CodCiudad
+JOIN PROVISTO_POR PP ON P.CodProv = PP.CodProv
+JOIN COMPUESTO_POR CP ON CP.CodMat = PP.CodMat
+JOIN ARTICULO A ON A.CodArt = CP.CodArt
+WHERE C.Nombre = 'La Plata';
+
+#6) Listar los nombres de aquellos proveedores que no proveen ningún material
+SELECT P.NOMBRE
+FROM proveedor P LEFT JOIN provisto_por PP ON P.CODPROV=PP.CODPROV
+WHERE PP.CODMAT IS NULL;
