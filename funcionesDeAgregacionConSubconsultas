@@ -58,7 +58,8 @@ INSERT INTO ARTICULO (CodArt, Descripcion, Precio)
 VALUES (001, 'Pan', 130.70),
 (002, 'Facturas', 300.00),
 (003, 'Cheese Cake', 450.87),
-(004, 'Pasta Frola', 278.90);
+(004, 'Pasta Frola', 278.90),
+(005, 'Torta', 10000.00);
 
 INSERT INTO MATERIAL (CodMat, Descripcion)
 VALUES (001, 'Aceite'),
@@ -103,7 +104,14 @@ VALUES(001, 001),
 (003, 001),
 (003, 002),
 (003, 006),
-(004, 007);
+(004, 007),
+(005, 001),
+(005, 002),
+(005, 003),
+(005, 004),
+(005, 005),
+(005, 006),
+(005, 007);
 
 INSERT INTO PROVISTO_POR(CodMat, CodProv)
 VALUES (001, 1),
@@ -149,3 +157,127 @@ WHERE C.Nombre = 'La Plata';
 SELECT P.NOMBRE
 FROM proveedor P LEFT JOIN provisto_por PP ON P.CODPROV=PP.CODPROV
 WHERE PP.CODMAT IS NULL;
+
+######		CON SUBCONSULTAS
+#7) Listar los nombres de aquellos proveedores que no proveen ningún material.
+SELECT P.NOMBRE
+FROM proveedor P 
+WHERE NOT EXISTS (
+	SELECT 1
+	FROM provisto_por PP
+	WHERE P.CODPROV = PP.CODPROV);
+	
+SELECT P.NOMBRE
+FROM proveedor P 
+WHERE NOT EXISTS (
+	SELECT 1
+	FROM provisto_por PP
+	WHERE PP.CODMAT  IS NOT NULL
+	AND P.CODPROV = PP.CODPROV);
+	
+SELECT P.NOMBRE
+FROM proveedor P
+WHERE P.CODPROV NOT IN(
+	SELECT PP.CODPROV
+	FROM provisto_por PP
+	WHERE PP.CODMAT IS NOT NULL);
+	
+#8) Listar los códigos y descripción de los materiales que provea el proveedor 2 y no los provea el proveedor 5
+SELECT M.CODMAT, M.DESCRIPCION
+FROM MATERIAL M
+WHERE EXISTS(
+	SELECT 1
+	FROM PROVISTO_POR PP
+	WHERE PP.CODPROV = 2 
+	AND PP.CODMAT = M.CODMAT )
+AND NOT EXISTS(
+	SELECT 1
+	FROM PROVISTO_POR PP
+	WHERE PP.CODPROV = 5
+	AND PP.CODMAT = M.CODMAT );
+	
+SELECT M.CODMAT, M.DESCRIPCION
+FROM material M	
+WHERE M.CODMAT IN (
+	SELECT PP.CODMAT	
+	FROM	provisto_por PP
+	WHERE PP.CODPROV = 2)
+AND M.CODMAT NOT IN (
+	SELECT PP.CODMAT
+	FROM provisto_por PP
+	WHERE PP.CODPROV = 5 );
+
+#9) Listar número y nombre de almacenes que contienen los artículos de descripción ‘Pan’ y los de descripción ‘Facturas’ (ambos).
+SELECT A.Nro Nro_Almacen, A.Nombre Nombre_Almacen
+FROM ALMACEN A
+WHERE A.Nro IN (SELECT C.Nro
+FROM ARTICULO AR JOIN CONTIENE C ON C.CodArt = AR.CodArt
+WHERE AR.Descripcion = 'Pan')
+AND A.Nro IN (SELECT C.Nro
+FROM ARTICULO AR JOIN CONTIENE C ON C.CodArt = AR.CodArt
+WHERE AR.Descripcion = 'Facturas');
+
+SELECT A.NRO, A.NOMBRE
+FROM almacen A
+WHERE EXISTS (
+	SELECT 1
+	FROM contiene C JOIN articulo AR ON C.CODART = AR.CODART
+	WHERE AR.DESCRIPCION= 'Pan'
+	AND A.NRO =C.NRO)
+AND EXISTS (
+	SELECT 1
+	FROM contiene C JOIN articulo AR ON C.CODART = AR.CODART
+	WHERE AR.DESCRIPCION= 'Facturas'
+	AND A.NRO =C.NRO);
+	
+SELECT A.Nro Nro_Almacen, A.Nombre Nombre_Almacen
+FROM ALMACEN A
+WHERE EXISTS (
+	SELECT C.Nro
+	FROM ARTICULO AR JOIN CONTIENE C ON C.CodArt = AR.CodArt
+	WHERE AR.Descripcion = 'Pan' AND A.Nro = C.Nro)
+AND EXISTS(
+	SELECT C.Nro
+	FROM ARTICULO AR JOIN CONTIENE C ON C.CodArt = AR.CodArt
+	WHERE AR.Descripcion = 'Facturas' AND A.Nro = C.Nro);
+
+#10) Listar la descripción de artículos compuestos por todos los materiales
+SELECT AR.Descripcion
+FROM ARTICULO AR JOIN COMPUESTO_POR CP ON AR.CodArt = CP.CodArt
+GROUP BY AR.CodArt
+HAVING COUNT(*) = (SELECT COUNT(*) FROM material);
+
+#11) Hallar los códigos y nombres de los proveedores que proveen al menos un material que se usa en algún artículo cuyo precio es mayor a $300 
+SELECT P.CODPROV, P.NOMBRE
+FROM proveedor P
+WHERE EXISTS(
+	SELECT 1
+	FROM provisto_por PP JOIN compuesto_por CP ON PP.CODMAT=CP.CODMAT
+	JOIN articulo A ON CP.CODART=A.CODART
+	WHERE A.PRECIO>300
+	AND P.CODPROV = PP.CODPROV);
+	
+SELECT P.CODPROV, P.NOMBRE
+FROM proveedor P
+WHERE P.CODPROV IN (
+	SELECT PP.CODPROV
+	FROM provisto_por PP JOIN compuesto_por CP ON PP.CODMAT=CP.CODMAT
+	JOIN articulo A ON CP.CODART=A.CODART
+	WHERE A.PRECIO>300);
+	
+SELECT DISTINCT PP.CodProv, P.Nombre NOMBRE_PROV
+FROM PROVISTO_POR PP JOIN PROVEEDOR P ON P.CodProv = PP.CodProv
+WHERE PP.CodMat IN(
+	SELECT CP.CodMat
+	FROM COMPUESTO_POR CP
+	WHERE CP.CodArt IN(
+		SELECT AR.CodArt
+		FROM ARTICULO AR
+		WHERE AR.Precio > 300));	
+
+#12) Listar la descripción de los artículos de mayor precio
+SELECT A.DESCRIPCION
+FROM articulo A
+WHERE A.PRECIO = (
+	SELECT MAX(PRECIO)
+	FROM articulo);
