@@ -1,2 +1,1 @@
-# MySQL
-Ejercicio2
+# MySQL with MariaDB & HeidiSQL
