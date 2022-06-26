@@ -1,0 +1,188 @@
+#ALQUILER DE AUTOS
+CREATE DATABASE IF NOT EXISTS ALQUILER_DE_AUTOS;
+USE ALQUILER_DE_AUTOS;
+
+CREATE TABLE Marca(
+	IdMarca INT(10) PRIMARY KEY,
+	Descripcion VARCHAR(50) );
+	
+CREATE TABLE Localidad(
+	IdLocalidad INT(10) PRIMARY KEY,
+	Descripcion VARCHAR(50) );
+	
+CREATE TABLE Vehiculo(
+	Patente VARCHAR(10) PRIMARY KEY,
+	Color VARCHAR(15),
+	Año DATE,
+	Capacidad INT(2),
+	Puertas INT(1),
+	IdMarca INT(10),
+	FOREIGN KEY(IdMarca) REFERENCES Marca(IdMarca) );
+
+#MODIFICACION CON ALTER TABLE ya que el anio deberia ser un entero y no un date
+ALTER TABLE vehiculo CHANGE Año Anio INT;
+
+CREATE TABLE Cliente(
+	Legajo INT(10) PRIMARY KEY,
+	Nombre VARCHAR(15),
+	Apellido VARCHAR(15),
+	Telefono INT(15),
+	IdLocalidad INT(10),
+	FOREIGN KEY(IdLocalidad) REFERENCES Localidad(IdLocalidad) );
+	
+CREATE TABLE Alquiler(
+	Id INT(10) PRIMARY KEY,
+	Patente VARCHAR(10),
+	legCliente INT(10),
+	FechaAlquiler DATE,
+	Importe DOUBLE,
+	CantDias INT(2),
+	FOREIGN KEY(Patente) REFERENCES Vehiculo(patente),
+	FOREIGN KEY(legCliente) REFERENCES Cliente(legajo) );
+
+INSERT INTO Marca (IdMarca, Descripcion) VALUES
+(1,'Nissan'),
+(2,'Renault'),
+(3,'Ford'),
+(4,'Volkswagen'),
+(5,'Fiat');
+
+INSERT INTO Localidad(IdLocalidad, Descripcion) VALUES
+	(1,'RAFAEL CASTILLO'),
+	(2,'ISIDRO CASANOVA'),
+	(3,'SAN JUSTO'),
+	(4,'LA FERRERE'),
+	(5,'CATAN'),
+	(6,'VIRREY DEL PINO'),
+	(7,'RAMOS MEJIA');
+
+INSERT INTO Vehiculo(Patente, Color, Anio, Capacidad, Puertas, IdMarca) VALUES 
+('AAA111', 'Azul', 2021, 2, 3, 1),
+('AAA112', 'Rojo', 2010, 10, 5, 2),
+('AAA113', 'Violeta', 2022, 11, 3, 3),
+('AAA114', 'Naranja', 1990, 5, 5, 1),
+('AAA115', 'Verde', 1994, 6, 3, 4),
+('AAA116', 'Azul', 2020, 11, 2, 2),
+('AAA117', 'Blanco', 1998, 9, 3, 5),
+('FFF555', 'Negro' , 2019, 4, 5, 1);
+
+INSERT INTO Cliente (Legajo, Nombre, Apellido, Telefono, IdLocalidad) VALUES
+(1, 'Juan', 'Pepe', '1530112339', 1),
+(2, 'Santiago', 'Molinos', '1530223448',2),
+(3, 'Ricardo', 'Marolio', '1530344557',3),
+(4, 'Roberto', 'Ledesma', '1530445666',4),
+(5, 'Alberto', 'Johnson', '1530556775',5);
+
+INSERT INTO Alquiler(Id, Patente, legCliente, FechaAlquiler, Importe, CantDias) VALUES 
+(1,'AAA111', 1, '2020-01-01', 300.00, 5),
+(2,'AAA111', 2, '2020-02-01', 700.00, 6),
+(3,'AAA112', 1, '2020-03-01', 100.00, 1),
+(4,'AAA111', 3, '2020-03-01', 3000.00, 15),
+(5,'AAA112', 3, '2020-03-01', 200.00, 2),
+(6,'AAA113', 3, '2021-10-01', 1000.00, 6),
+(7,'AAA115', 1, '2021-07-01', 15000.00, 31),
+(8,'FFF555', 3, '2022-01-31', 500.00, 9),
+(9,'AAA114', 5, '2020-02-20', 4000.00, 8);
+
+#1. Generar el script de creación de tabla de Alquiler con sus restricciones (realizado anteriormente)
+
+#2. Obtener los datos de todos los vehículos, ordenados por marca (descripción) y patente.
+SELECT *
+FROM vehiculo V JOIN marca M ON V.IdMarca=M.IdMarca
+ORDER BY M.Descripcion, V.patente;
+
+#3. Para cada marca, informar la cantidad de vehículos total y máxima capacidad, únicamente para aquellos vehículos con más de 4 puertas.
+SELECT IdMarca, COUNT(*), MAX(Capacidad)
+FROM  vehiculo 
+WHERE Puertas > 4
+GROUP BY IdMarca;
+
+#4 Informar: Legajo, Nombre y apellido del cliente, patente, color del auto, fecha de alquiler, importe, impuestos (15% del importe del alquiler), de todos los alquileres registrados en el mes de febrero.
+SELECT C.LEGAJO, C.NOMBRE, C.APELLIDO, V.Patente, V.color, A.FechaAlquiler, A.Importe, (A.Importe*0.15) AS Impuestos
+FROM cliente C JOIN alquiler A ON C.Legajo=A.legCliente
+JOIN vehiculo V ON A.Patente=V.Patente
+WHERE MONTH(A.FechaAlquiler) = 2;
+
+#5. Generar el script para agregar el siguiente Auto: ABC234, Rojo, 2021, 5, 4, 7.
+INSERT INTO Marca (IdMarca, Descripcion) VALUES
+(6,'Chevrolet'),
+(7,'Audi');
+
+INSERT INTO vehiculo (Patente, Color, Anio, Capacidad, Puertas, IdMarca) VALUES
+	('ABC234', 'Rojo', 2021, 5, 4, 7);
+
+#6. Escribir la sentencia para modificar el color del auto FFF555 ya que el mismo es gris.
+SELECT V.COLOR
+FROM vehiculo V
+WHERE V.Patente= 'FFF555';
+
+UPDATE vehiculo V
+SET V.Color = 'Gris'
+WHERE V.Patente= 'FFF555';
+
+SELECT V.COLOR
+FROM vehiculo V
+WHERE V.Patente= 'FFF555';
+
+#7. Detallar la patente de todos los autos que tienen la máxima capacidad
+SELECT V.PATENTE
+FROM vehiculo V
+WHERE V.CAPACIDAD = (
+	SELECT MAX(CAPACIDAD)
+	FROM VEHICULO);
+
+#8. Mostrar los datos de los clientes que han alquilado algún vehículo de Marca Nissan pero nunca han alquilado un Ford.
+SELECT *
+FROM cliente C 
+WHERE C.Legajo IN(
+	SELECT A.legCliente
+	FROM alquiler A JOIN vehiculo V ON A.Patente = V.Patente
+	JOIN marca M ON V.IdMarca = M.IdMarca
+	WHERE M.Descripcion = 'Nissan')
+AND C.Legajo NOT IN(
+	SELECT A.legCliente
+	FROM Marca M JOIN Vehiculo V ON V.IdMarca = M.IdMarca
+	JOIN Alquiler A ON A.Patente = V.Patente
+	WHERE M.Descripcion = 'Ford');
+	
+SELECT *
+FROM cliente C 
+WHERE EXISTS(
+	SELECT 1
+	FROM alquiler A JOIN vehiculo V ON A.Patente = V.Patente
+	JOIN marca M ON V.IdMarca = M.IdMarca
+	WHERE M.Descripcion = 'Nissan'
+	AND A.legCliente = C.Legajo)
+AND NOT EXISTS(
+	SELECT 1
+	FROM Marca M JOIN Vehiculo V ON V.IdMarca = M.IdMarca
+	JOIN Alquiler A ON A.Patente = V.Patente
+	WHERE M.Descripcion = 'Ford'
+	AND C.Legajo = A.legCliente);
+
+#9. Listar la patente, importe total de alquiler, cantidad de alquiler por auto, únicamente para los vehículos que hayan sido alquilados más de una vez.
+SELECT A.PATENTE, SUM(A.IMPORTE), COUNT(A.Id)
+FROM alquiler A
+GROUP BY A.PATENTE
+HAVING COUNT(A.Id) >1;
+
+SELECT A.Patente, SUM(A.Importe) Importe_Total, Count(Id) Cant_Alquileres
+FROM Alquiler A
+WHERE A.Patente IN
+	(SELECT V.Patente
+	FROM Alquiler A JOIN Vehiculo V
+	ON A.Patente = V.Patente
+	GROUP BY V.Patente
+	HAVING count(A.Id) > 1)
+GROUP BY A.Patente;
+
+#10. Informar los datos de los clientes que han alquilado más de una vez en la agencia en el último trimestre (enero, febrero y marzo 2020)
+SELECT C.*
+FROM cliente C
+WHERE C.Legajo IN (
+	SELECT A.legCliente
+	FROM alquiler A
+	WHERE A.FechaAlquiler BETWEEN '2020-01-01' AND '2020-03-31'
+	GROUP BY A.legCliente
+	HAVING COUNT(A.ID) > 1  );
+	
