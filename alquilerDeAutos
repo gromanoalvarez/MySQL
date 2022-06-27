@@ -186,3 +186,11 @@ WHERE C.Legajo IN (
 	GROUP BY A.legCliente
 	HAVING COUNT(A.ID) > 1  );
 	
+SELECT C.*
+FROM Cliente C
+WHERE C.Legajo IN(
+	SELECT A.legCliente
+	FROM Alquiler A
+	WHERE month(A.FechaAlquiler) IN (1, 2, 3) AND year(A.FechaAlquiler) = 2020
+	GROUP BY A.legCliente
+	HAVING Count(A.Id) > 1);
