@@ -1,4 +1,3 @@
-
 CREATE DATABASE IF NOT EXISTS RESTAURANTE;
 USE RESTAURANTE;
 
@@ -110,6 +109,7 @@ INSERT INTO PedidoDetalle (IdDetalle, IdPedido, IdPlato, Cantidad) VALUES
 (21, 16, 8, 1),
 (22, 16, 9, 1);
 
+
 #2- Obtener los datos de todos los clientes, ordenados por Localidad, Nombre y Apellido.
 SELECT *
 FROM cliente  
@@ -122,9 +122,7 @@ JOIN plato p ON pd.IdPlato=p.IdPlato
 GROUP BY pe.IdPedido;
 
 SELECT pd.idpedido, COUNT(DISTINCT pd.IDplato), SUM(Cantidad), SUM(precio*cantidad)
-FROM PedidoDetalle pd
-INNER JOIN PLATO P
-ON pd.idplato = p.Idplato
+FROM PedidoDetalle pd JOIN PLATO P ON pd.idplato = p.Idplato
 GROUP BY idpedido;
 
 #4- Mostrar un detalle de los clientes que han realizado pedidos en el mes de Enero y no realizaron ningún pedido en el mes de marzo.
@@ -140,6 +138,19 @@ AND NOT EXISTS(
 	FROM pedidoencabezado
 	WHERE MONTH(fecha)=3
 	AND IdCliente = cliente.IdCliente);
+	
+	SELECT *
+FROM cliente
+WHERE EXISTS(
+	SELECT 1
+	FROM PedidoEncabezado
+	WHERE IdCliente = cliente.IdCliente 
+	AND MONTH(fecha)=1)
+AND NOT EXISTS(
+	SELECT 1
+	FROM pedidoencabezado
+	WHERE IdCliente = cliente.IdCliente
+	AND MONTH(fecha)=3 );
 
 #5 Informar el nombre del plato mas barato de la carta.
 SELECT descripcion
@@ -163,6 +174,15 @@ WHERE P.IdPlato IN (
 	FROM PedidoEncabezado PE JOIN PedidoDetalle PD ON PE.IdPedido = PD.IdPedido
 	GROUP BY PD.IdPlato
 	HAVING COUNT(DISTINCT PE.IdCliente)> 1);
+	
+	SELECT * 
+FROM PLATO P
+WHERE P.IdPlato IN (
+	SELECT PD.IdPlato
+	FROM PedidoDetalle PD JOIN  pedidoencabezado PE ON PE.IdPedido = PD.IdPedido
+	GROUP BY PD.IdPlato
+	HAVING COUNT(DISTINCT PE.IdCliente)> 1);
+	
 
 #8 Mostrar los clientes que han pedido todos los platos del menú.
 SELECT *
@@ -173,6 +193,16 @@ WHERE NOT EXISTS (SELECT 1
 												FROM PEDIDODETALLE PD INNER JOIN PEDIDOENCABEZADO PE ON PE.idPedido = PD.idPedido
 												WHERE pe.idCliente = c.idCliente
 												and p.IdPlato = pd.idPlato));
+												
+SELECT pe.IdCliente
+FROM pedidoencabezado pe 
+WHERE pe.IdPedido IN ( 
+	SELECT pd.IdPedido
+	FROM pedidodetalle pd
+	GROUP BY pd.IdPedido
+	HAVING COUNT(pd.IdPlato)= ( 
+		SELECT COUNT(*)
+		FROM plato) );
 
 #9- Informar la descripción y precio de los platos que no han sido comprados por ningún cliente.
 SELECT descripcion, precio
@@ -181,3 +211,8 @@ WHERE NOT EXISTS (
 						SELECT 1
 						FROM PedidoDetalle pd
 						WHERE pd.idPlato = p.IdPlato);
+
+SELECT p.descripcion, p.precio
+FROM plato p
+WHERE p.IdPlato NOT IN ( SELECT pd.idplato FROM pedidodetalle pd);
+						
